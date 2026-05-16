@@ -16,16 +16,14 @@ export const createContactService = async (payload) => {
 
   await sendMail({
     to: env.RECEIVER_EMAIL,
-    from: sanitizedPayload.email,
-    subject: `Portfolio Contact From ${sanitizedPayload.name}`,
-    html: contactNotificationTemplate(sanitizedPayload),
+    subject: `Portfolio Contact From ${payload.name}`,
+    html: contactNotificationTemplate(payload),
   });
 
   await sendMail({
-    to: sanitizedPayload.email,
-    from: env.MAIL_FROM ?? env.SMTP_USER,
+    to: payload.email,
     subject: "Thanks for contacting me",
-    html: autoReplyTemplate(sanitizedPayload.name),
+    html: autoReplyTemplate(payload.name),
   });
 
   return savedMessage;
