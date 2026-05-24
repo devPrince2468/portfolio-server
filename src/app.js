@@ -16,25 +16,7 @@ app.set("trust proxy", 1);
 
 app.use(helmet());
 
-const normalizeOrigin = (url) => url.replace(/\/$/, "");
-
-app.use(
-  cors({
-    origin(origin, callback) {
-      // Non-browser clients (curl, Postman) omit Origin
-      if (!origin) {
-        return callback(null, true);
-      }
-
-      if (normalizeOrigin(origin) === normalizeOrigin(env.CLIENT_URL)) {
-        return callback(null, true);
-      }
-
-      return callback(null, false);
-    },
-    credentials: true,
-  })
-);
+app.use(cors({ origin: env.CLIENT_URL, credentials: true }));
 
 app.use(express.json({ limit: "10kb" }));
 
