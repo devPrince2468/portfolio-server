@@ -7,17 +7,36 @@ import { logger } from "../config/logger.js";
 import { sanitizeInput } from "../utils/sanitize.js";
 
 const sendContactEmails = async (payload) => {
-  await sendMail({
-    to: env.RECEIVER_EMAIL,
-    subject: `Portfolio Contact From ${payload.name}`,
-    html: contactNotificationTemplate(payload),
-  });
+  let notificationSent = false;
+  let autoReplySent = false;
 
-  await sendMail({
-    to: payload.email,
-    subject: "Thanks for contacting me",
-    html: autoReplyTemplate(payload.name),
-  });
+  try {
+    await sendMail({
+      to: env.RECEIVER_EMAIL,
+      replyTo: payload.email,
+      subject: `Portfolio Contact From ${payload.name}`,
+      html: contactNotificationTemplate(payload),
+    });
+    notificationSent = true;
+  } catch (error) {
+    logger.warn({ err: error }, "Contact notification email failed");
+  }
+
+  try {
+    await sendMail({
+      to: payload.email,
+      subject: "Thanks for contacting me",
+      html: autoReplyTemplate(payload.name),
+    });
+    autoReplySent = true;
+  } catch (error) {
+    logger.warn(
+      { err: error },
+      "Contact auto-reply email failed (verify a domain on Resend to send to visitors)"
+    );
+  }
+
+  return { notificationSent, autoReplySent };
 };
 
 export const createContactService = async (payload) => {
@@ -28,15 +47,11 @@ export const createContactService = async (payload) => {
   };
 
   const savedMessage = await ContactMessage.create(sanitizedPayload);
+  const { notificationSent, autoReplySent } = await sendContactEmails(payload);
 
-  try {
-    await sendContactEmails(payload);
-    return { savedMessage, emailDelivered: true };
-  } catch (error) {
-    logger.warn(
-      { err: error, code: error.code },
-      "Contact saved but email delivery failed (SMTP is often blocked on Railway/Render free tiers)"
-    );
-    return { savedMessage, emailDelivered: false };
-  }
+  return {
+    savedMessage,
+    emailDelivered: notificationSent,
+    autoReplySent,
+  };
 };

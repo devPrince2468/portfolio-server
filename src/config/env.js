@@ -10,13 +10,17 @@ const envSchema = z.object({
   CLIENT_URL: z
     .string()
     .transform((url) => url.replace(/\/$/, "")),
-  SMTP_HOST: z.string(),
-  SMTP_PORT: z.string(),
-  SMTP_USER: z.string(),
-  SMTP_PASS: z
+  RESEND_API_KEY: z.string().min(1),
+  RESEND_FROM: z
     .string()
-    .transform((pass) => pass.replace(/^["']|["']$/g, "")),
-  RECEIVER_EMAIL: z.string(),
+    .min(3)
+    .refine(
+      (value) =>
+        z.email().safeParse(value).success ||
+        /^.+\s<[^@\s]+@[^@\s]+\.[^@\s]+>$/.test(value),
+      { message: "Must be email@domain.com or Name <email@domain.com>" }
+    ),
+  RECEIVER_EMAIL: z.string().email(),
 });
 
 export const env = envSchema.parse(process.env);
