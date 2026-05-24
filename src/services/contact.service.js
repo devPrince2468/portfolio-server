@@ -6,6 +6,8 @@ import { env } from "../config/env.js";
 import { logger } from "../config/logger.js";
 import { sanitizeInput } from "../utils/sanitize.js";
 
+const isResendTestFrom = () => env.RESEND_FROM.includes("@resend.dev");
+
 const sendContactEmails = async (payload) => {
   let notificationSent = false;
   let autoReplySent = false;
@@ -22,18 +24,21 @@ const sendContactEmails = async (payload) => {
     logger.warn({ err: error }, "Contact notification email failed");
   }
 
-  try {
-    await sendMail({
-      to: payload.email,
-      subject: "Thanks for contacting me",
-      html: autoReplyTemplate(payload.name),
-    });
-    autoReplySent = true;
-  } catch (error) {
-    logger.warn(
-      { err: error },
-      "Contact auto-reply email failed (verify a domain on Resend to send to visitors)"
+  if (isResendTestFrom()) {
+    logger.info(
+      "Skipping visitor auto-reply while using Resend test sender (onboarding@resend.dev)"
     );
+  } else {
+    try {
+      await sendMail({
+        to: payload.email,
+        subject: "Thanks for contacting me",
+        html: autoReplyTemplate(payload.name),
+      });
+      autoReplySent = true;
+    } catch (error) {
+      logger.warn({ err: error }, "Contact auto-reply email failed");
+    }
   }
 
   return { notificationSent, autoReplySent };
